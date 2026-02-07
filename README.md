@@ -91,7 +91,7 @@ input.cell{
   width:100%;
   background:transparent;
   border:none;
-  color:white;
+  color:black; 
   outline:none;
   padding:6px;
   font-size:13px;
