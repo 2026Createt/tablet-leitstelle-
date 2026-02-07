@@ -8,19 +8,19 @@
 <style>
 :root{
   --bg:#0b1220;
-  --text:#e9eefc;
-  --muted:#aab6da;
-  --accent:#5eead4;
-  --border:rgba(255,255,255,.08);
-  --radius:22px;
+  --text:#ffffff;
+  --border:rgba(255,255,255,.12);
+  --table:#0f172a;
+  --cell:#020617;
 }
 body{
   margin:0;
   font-family:ui-sans-serif,system-ui,sans-serif;
-  background: radial-gradient(1200px 700px at 20% 10%, rgba(96,165,250,.22), transparent 55%),
-              radial-gradient(900px 600px at 85% 35%, rgba(94,234,212,.20), transparent 50%),
-              radial-gradient(900px 600px at 55% 95%, rgba(251,113,133,.14), transparent 45%),
-              var(--bg);
+  background:
+    radial-gradient(1200px 700px at 20% 10%, rgba(96,165,250,.22), transparent 55%),
+    radial-gradient(900px 600px at 85% 35%, rgba(94,234,212,.20), transparent 50%),
+    radial-gradient(900px 600px at 55% 95%, rgba(251,113,133,.14), transparent 45%),
+    var(--bg);
   color:var(--text);
   min-height:100vh;
   display:flex;
@@ -30,7 +30,7 @@ header{
   position:sticky;
   top:0;
   backdrop-filter:blur(14px);
-  background:rgba(11,18,32,.55);
+  background:rgba(11,18,32,.6);
   border-bottom:1px solid var(--border);
   padding:18px;
   display:flex;
@@ -39,8 +39,9 @@ header{
 }
 .logo{
   width:44px;height:44px;border-radius:16px;
-  background: linear-gradient(135deg, rgba(94,234,212,.95), rgba(96,165,250,.95));
-  display:grid;place-items:center;color:#06111f;font-weight:900;
+  background:linear-gradient(135deg,#5eead4,#60a5fa);
+  display:grid;place-items:center;
+  color:#020617;font-weight:900;
 }
 main{
   flex:1;
@@ -50,36 +51,53 @@ main{
   padding:25px;
 }
 input{
-  padding:12px;border-radius:14px;border:1px solid var(--border);
-  background: rgba(0,0,0,.18);color: var(--text);
-  outline:none;width:220px;margin-bottom:12px
+  padding:12px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:white;
+  outline:none;
+  width:220px;
+  margin-bottom:12px;
 }
 button{
-  padding:12px 14px;border-radius:16px;border:0;cursor:pointer;
-  font-weight:700;font-size:14px;color:#06111f;
-  background: linear-gradient(135deg, rgba(94,234,212,.95), rgba(96,165,250,.95));
-  margin:6px;width:240px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:0;
+  cursor:pointer;
+  font-weight:700;
+  font-size:14px;
+  color:#020617;
+  background:linear-gradient(135deg,#5eead4,#60a5fa);
+  margin:6px;
+  width:240px;
 }
 table{
   border-collapse:collapse;
   margin-top:20px;
-  width:98%;
+  width:99%;
+  background:var(--table);
 }
-td{
+th,td{
   border:1px solid var(--border);
   padding:6px;
+  text-align:center;
+}
+th{
+  background:#020617;
+  font-size:13px;
 }
 input.cell{
   width:100%;
   background:transparent;
   border:none;
-  color:var(--text);
+  color:white;
   outline:none;
+  padding:6px;
+  font-size:13px;
 }
-.controls{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
+.status{
+  font-weight:700;
 }
 </style>
 </head>
@@ -101,10 +119,8 @@ input.cell{
 <div id="app" style="display:none;">
   <h3 id="jobTitle"></h3>
 
-  <div class="controls">
-    <button onclick="addRow()">Zeile hinzufügen</button>
-    <button onclick="clearTable()">Tabelle löschen</button>
-  </div>
+  <button onclick="addRow()">Zeile hinzufügen</button>
+  <button onclick="clearTable()">Tabelle löschen</button>
 
   <table id="table"></table>
 </div>
@@ -115,17 +131,22 @@ input.cell{
 let job="";
 let data=[];
 
+const headers=[
+"CALL ID","CODE","PRIORITY","ADDRESS","UNIT",
+"STATUS","INFO","TIME","CHANNEL","NOTES"
+];
+
 function login(){
   const pw=document.getElementById("pw").value.trim();
 
-  if(pw==="01"){job="pd";}
-  else if(pw==="02"){job="fd";}
-  else if(pw==="03"){job="md";}
-  else{alert("Falsches Passwort");return;}
+  if(pw==="01") job="pd";
+  else if(pw==="02") job="fd";
+  else if(pw==="03") job="md";
+  else{ alert("Falsches Passwort"); return; }
 
   document.getElementById("loginBox").style.display="none";
   document.getElementById("app").style.display="block";
-  document.getElementById("jobTitle").innerText=job.toUpperCase()+" Leitstelle";
+  document.getElementById("jobTitle").innerText=job.toUpperCase()+" DISPATCH";
 
   loadData();
   buildTable();
@@ -144,9 +165,29 @@ function save(){
   localStorage.setItem("leitstelle_"+job,JSON.stringify(data));
 }
 
+function statusColor(val,el){
+  val=val.toUpperCase();
+
+  el.style.background="";
+  if(val==="AVAILABLE") el.style.background="#16a34a";
+  if(val==="EN ROUTE") el.style.background="#2563eb";
+  if(val==="ON SCENE") el.style.background="#ea580c";
+  if(val==="BUSY") el.style.background="#dc2626";
+  if(val==="TRANSPORT") el.style.background="#9333ea";
+  if(val==="OFF DUTY") el.style.background="#6b7280";
+}
+
 function buildTable(){
   const table=document.getElementById("table");
   table.innerHTML="";
+
+  const head=document.createElement("tr");
+  headers.forEach(h=>{
+    const th=document.createElement("th");
+    th.innerText=h;
+    head.appendChild(th);
+  });
+  table.appendChild(head);
 
   data.forEach((row,r)=>{
     const tr=document.createElement("tr");
@@ -160,12 +201,14 @@ function buildTable(){
       input.addEventListener("input",()=>{
         data[r][c]=input.value;
         save();
+        if(c===5) statusColor(input.value,input);
       });
+
+      if(c===5) statusColor(input.value,input);
 
       td.appendChild(input);
       tr.appendChild(td);
     }
-
     table.appendChild(tr);
   });
 }
@@ -177,7 +220,7 @@ function addRow(){
 }
 
 function clearTable(){
-  if(confirm("Wirklich alles löschen?")){
+  if(confirm("Alles löschen?")){
     localStorage.removeItem("leitstelle_"+job);
     data=[];
     loadData();
@@ -188,3 +231,4 @@ function clearTable(){
 
 </body>
 </html>
+
